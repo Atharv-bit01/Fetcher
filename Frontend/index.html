@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fetchr — YouTube Downloader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    /* ── CSS Variables ─────────────────────────────────────────────────── */
+    :root {
+      --bg: #f9f8f6;
+      --surface: #ffffff;
+      --surface2: #f4f3f0;
+      --border: rgba(0,0,0,0.08);
+      --border-strong: rgba(0,0,0,0.14);
+      --text: #1a1a18;
+      --text2: #6b6b66;
+      --text3: #9e9e98;
+      --accent: #2563eb;
+      --accent-light: #eff4ff;
+      --accent-hover: #1d4ed8;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --green: #16a34a;
+      --green-light: #f0fdf4;
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.06);
+      --transition: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    [data-theme="dark"] {
+      --bg: #111110;
+      --surface: #1c1c1a;
+      --surface2: #242422;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.14);
+      --text: #f0efe9;
+      --text2: #9e9e98;
+      --text3: #5c5c57;
+      --accent: #3b82f6;
+      --accent-light: #1e2a3f;
+      --accent-hover: #60a5fa;
+      --red: #f87171;
+      --red-light: #2a1818;
+      --green: #4ade80;
+      --green-light: #162818;
+      --amber: #fbbf24;
+      --amber-light: #271f0e;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+      --shadow-lg: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    /* ── Reset & Base ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+      transition: background var(--transition), color var(--transition);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; border: none; outline: none; }
+    input { font-family: inherit; outline: none; }
+
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .page { max-width: 680px; margin: 0 auto; padding: 0 20px 80px; }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 0 48px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--accent); display: flex; align-items: center;
+      justify-content: center;
+    }
+    .logo-icon svg { width: 18px; height: 18px; fill: white; }
+    .logo-name { font-size: 18px; font-weight: 600; letter-spacing: -0.4px; }
+    .logo-badge {
+      font-size: 10px; font-weight: 500; color: var(--text3);
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 2px 7px; border-radius: 20px; letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .theme-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text2); transition: var(--transition);
+      font-size: 16px;
+    }
+    .theme-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+
+    /* ── Hero text ──────────────────────────────────────────────────────── */
+    .hero { margin-bottom: 36px; }
+    .hero h1 {
+      font-size: clamp(26px, 5vw, 36px); font-weight: 600;
+      letter-spacing: -0.8px; line-height: 1.2; margin-bottom: 10px;
+    }
+    .hero p { color: var(--text2); font-size: 15px; font-weight: 300; }
+
+    /* ── URL Input card ─────────────────────────────────────────────────── */
+    .input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px;
+      box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 6px;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .input-card:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12), var(--shadow);
+    }
+    .url-input {
+      flex: 1; background: transparent; border: none;
+      padding: 10px 12px; font-size: 14px; color: var(--text);
+      min-width: 0;
+    }
+    .url-input::placeholder { color: var(--text3); }
+    .paste-btn {
+      height: 38px; padding: 0 14px;
+      background: var(--surface2); color: var(--text2);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500;
+      transition: var(--transition); white-space: nowrap;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .paste-btn:hover { background: var(--surface); border-color: var(--border-strong); color: var(--text); }
+    .fetch-btn {
+      height: 38px; padding: 0 18px;
+      background: var(--accent); color: white;
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600;
+      transition: var(--transition); white-space: nowrap;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .fetch-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .fetch-btn:active { transform: scale(0.98); }
+    .fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Loading Spinner ────────────────────────────────────────────────── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error banner ───────────────────────────────────────────────────── */
+    .error-banner {
+      background: var(--red-light); border: 1px solid var(--red);
+      color: var(--red); border-radius: var(--radius-sm);
+      padding: 10px 14px; font-size: 13px; font-weight: 500;
+      margin-top: 12px; display: flex; align-items: center; gap: 8px;
+      animation: fadeIn 0.2s ease;
+    }
+    .hidden { display: none !important; }
+
+    /* ── Video card ─────────────────────────────────────────────────────── */
+    #result-area { animation: fadeSlideUp 0.3s ease; }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .video-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      box-shadow: var(--shadow); margin-bottom: 16px;
+    }
+    .video-thumb-wrap { position: relative; }
+    .video-thumb {
+      width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block;
+    }
+    .video-duration {
+      position: absolute; bottom: 10px; right: 10px;
+      background: rgba(0,0,0,0.75); color: white;
+      font-size: 12px; font-weight: 500; font-family: 'DM Mono', monospace;
+      padding: 3px 8px; border-radius: 5px; letter-spacing: 0.5px;
+    }
+    .video-meta { padding: 16px 18px; }
+    .video-title {
+      font-size: 16px; font-weight: 600; letter-spacing: -0.3px;
+      margin-bottom: 6px; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .video-sub {
+      font-size: 13px; color: var(--text2); display: flex;
+      align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .video-sub span { display: flex; align-items: center; gap: 4px; }
+
+    /* ── Download section ───────────────────────────────────────────────── */
+    .section-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text3); margin-bottom: 10px;
+    }
+    .format-tabs {
+      display: flex; gap: 6px; margin-bottom: 16px;
+    }
+    .format-tab {
+      padding: 7px 16px; border-radius: 30px;
+      font-size: 13px; font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text2);
+      transition: var(--transition); display: flex; align-items: center; gap: 6px;
+    }
+    .format-tab.active {
+      background: var(--accent-light); color: var(--accent);
+      border-color: var(--accent);
+    }
+    .format-tab:hover:not(.active) {
+      background: var(--surface); border-color: var(--border-strong); color: var(--text);
+    }
+
+    .format-grid { display: flex; flex-direction: column; gap: 8px; }
+    .format-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 14px;
+      transition: var(--transition); cursor: pointer;
+    }
+    .format-row:hover {
+      border-color: var(--accent); background: var(--accent-light);
+    }
+    .format-left { display: flex; align-items: center; gap: 12px; }
+    .format-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .format-icon.video { background: var(--accent-light); }
+    .format-icon.audio { background: var(--green-light); }
+    .format-label { font-size: 14px; font-weight: 600; }
+    .format-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .dl-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600;
+      transition: var(--transition);
+    }
+    .dl-btn.video-btn { background: var(--accent); color: white; }
+    .dl-btn.video-btn:hover { background: var(--accent-hover); }
+    .dl-btn.audio-btn { background: var(--green); color: white; }
+    .dl-btn.audio-btn:hover { background: #15803d; }
+    .dl-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+    /* ── Download progress ──────────────────────────────────────────────── */
+    .progress-toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 100;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px;
+      box-shadow: var(--shadow-lg); min-width: 280px;
+      animation: slideInUp 0.3s ease;
+    }
+    @keyframes slideInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .progress-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+    .progress-bar-bg {
+      height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%; background: var(--accent); border-radius: 2px;
+      transition: width 0.3s ease;
+      animation: indeterminate 1.4s ease infinite;
+    }
+    @keyframes indeterminate {
+      0%   { transform: translateX(-100%); width: 60%; }
+      100% { transform: translateX(200%); width: 60%; }
+    }
+    .progress-note { font-size: 12px; color: var(--text2); margin-top: 6px; }
+
+    /* ── History ────────────────────────────────────────────────────────── */
+    .history-section { margin-top: 40px; }
+    .history-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .clear-btn {
+      font-size: 12px; color: var(--text3); background: none;
+      border: none; cursor: pointer; padding: 2px 0;
+    }
+    .clear-btn:hover { color: var(--red); }
+    .history-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      margin-bottom: 6px; cursor: pointer; transition: var(--transition);
+    }
+    .history-item:hover { border-color: var(--accent); }
+    .history-thumb {
+      width: 52px; height: 30px; border-radius: 5px;
+      object-fit: cover; flex-shrink: 0;
+    }
+    .history-meta { flex: 1; min-width: 0; }
+    .history-title {
+      font-size: 13px; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .history-date { font-size: 11px; color: var(--text3); }
+
+    /* ── QR Modal ───────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; animation: fadeIn 0.2s ease;
+    }
+    .modal {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 28px; box-shadow: var(--shadow-lg);
+      text-align: center; max-width: 300px; width: 90%;
+    }
+    .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .modal p { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+    #qr-canvas { margin: 0 auto; display: flex; justify-content: center; }
+    .modal-close {
+      margin-top: 20px; padding: 8px 24px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
+      transition: var(--transition); color: var(--text);
+    }
+    .modal-close:hover { background: var(--surface); border-color: var(--border-strong); }
+
+    /* ── Disclaimer ─────────────────────────────────────────────────────── */
+    .disclaimer {
+      margin-top: 48px; padding: 14px 16px;
+      background: var(--amber-light); border: 1px solid var(--amber);
+      border-radius: var(--radius-sm); font-size: 12px; color: var(--amber);
+      line-height: 1.6;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────────────── */
+    footer {
+      text-align: center; padding-top: 40px;
+      font-size: 12px; color: var(--text3);
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 520px) {
+      .paste-btn { display: none; }
+      .fetch-btn { padding: 0 14px; }
+      .format-row { flex-wrap: wrap; gap: 10px; }
+      .progress-toast { left: 16px; right: 16px; min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Header -->
+    <header>
+      <div class="logo">
+        <div class="logo-icon">
+          <!-- Download arrow icon -->
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.59l-3.29-3.3-1.42 1.42L12 20l5.71-5.29-1.42-1.42L13 16.59V8h-2v8.59z"/>
+          </svg>
+        </div>
+        <span class="logo-name">Fetchr</span>
+        <span class="logo-badge">Beta</span>
+      </div>
+      <div class="header-actions">
+        <button class="theme-btn" id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <div class="hero">
+      <h1>Download any YouTube&nbsp;video.</h1>
+      <p>Paste a link, pick your quality, and download in seconds.</p>
+    </div>
+
+    <!-- Input card -->
+    <div class="input-card" id="input-card">
+      <input
+        type="url"
+        class="url-input"
+        id="url-input"
+        placeholder="Paste YouTube URL here…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button class="paste-btn" id="paste-btn">
+        📋 Paste
+      </button>
+      <button class="fetch-btn" id="fetch-btn">
+        <span id="fetch-label">Fetch</span>
+      </button>
+    </div>
+    <div class="error-banner hidden" id="error-banner">
+      <span>⚠</span><span id="error-msg">Error</span>
+    </div>
+
+    <!-- Result area -->
+    <div id="result-area" class="hidden" style="margin-top: 24px;">
+      <!-- Video card -->
+      <div class="video-card">
+        <div class="video-thumb-wrap">
+          <img class="video-thumb" id="video-thumb" src="" alt="Video thumbnail" />
+          <span class="video-duration" id="video-duration"></span>
+        </div>
+        <div class="video-meta">
+          <div class="video-title" id="video-title"></div>
+          <div class="video-sub">
+            <span>👤 <span id="video-uploader"></span></span>
+            <span>👁 <span id="video-views"></span></span>
+            <button
+              id="qr-btn"
+              style="margin-left:auto; background:none; border:1px solid var(--border); padding:4px 10px; border-radius:20px; font-size:12px; color:var(--text2); cursor:pointer; transition:var(--transition);"
+              title="Share via QR code"
+            >📱 QR Share</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Format tabs -->
+      <div class="format-tabs">
+        <button class="format-tab active" data-tab="video" id="tab-video">
+          🎥 Video
+        </button>
+        <button class="format-tab" data-tab="audio" id="tab-audio">
+          🎧 Audio
+        </button>
+      </div>
+
+      <!-- Video formats -->
+      <div id="video-formats" class="format-grid"></div>
+      <!-- Audio formats -->
+      <div id="audio-formats" class="format-grid hidden"></div>
+    </div>
+
+    <!-- History -->
+    <div class="history-section hidden" id="history-section">
+      <div class="history-header">
+        <div class="section-label">Recent</div>
+        <button class="clear-btn" id="clear-history">Clear all</button>
+      </div>
+      <div id="history-list"></div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer">
+      ⚠️ <strong>Disclaimer:</strong> This tool is intended for downloading content you have the rights to access and use. Please respect copyright law and YouTube's Terms of Service. Do not download or distribute copyrighted content without permission. This app does not store any video or audio files on its servers.
+    </div>
+
+    <footer>Built with yt-dlp &amp; Express · For personal use only</footer>
+  </div>
+
+  <!-- Progress toast -->
+  <div class="progress-toast hidden" id="progress-toast">
+    <div class="progress-title">⬇ Preparing download…</div>
+    <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="progress-note">Your download will start automatically.</div>
+  </div>
+
+  <!-- QR Modal -->
+  <div class="modal-overlay hidden" id="qr-modal">
+    <div class="modal">
+      <h3>📱 Scan to share</h3>
+      <p>Scan this QR code to open the video on another device.</p>
+      <div id="qr-canvas"></div>
+      <button class="modal-close" id="qr-close">Done</button>
+    </div>
+  </div>
+
+  <script>
+  // ── Config ──────────────────────────────────────────────────────────────
+  // Change this to your deployed backend URL in production!
+  const API_BASE = 'http://localhost:3001/api';
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let currentVideoData = null;
+  let currentUrl = '';
+
+  // ── DOM refs ─────────────────────────────────────────────────────────────
+  const urlInput     = document.getElementById('url-input');
+  const fetchBtn     = document.getElementById('fetch-btn');
+  const fetchLabel   = document.getElementById('fetch-label');
+  const pasteBtn     = document.getElementById('paste-btn');
+  const errorBanner  = document.getElementById('error-banner');
+  const errorMsg     = document.getElementById('error-msg');
+  const resultArea   = document.getElementById('result-area');
+  const videoThumb   = document.getElementById('video-thumb');
+  const videoDur     = document.getElementById('video-duration');
+  const videoTitle   = document.getElementById('video-title');
+  const videoUpl     = document.getElementById('video-uploader');
+  const videoViews   = document.getElementById('video-views');
+  const videoFmts    = document.getElementById('video-formats');
+  const audioFmts    = document.getElementById('audio-formats');
+  const tabVideo     = document.getElementById('tab-video');
+  const tabAudio     = document.getElementById('tab-audio');
+  const progressToast = document.getElementById('progress-toast');
+  const themeToggle  = document.getElementById('theme-toggle');
+  const historySec   = document.getElementById('history-section');
+  const historyList  = document.getElementById('history-list');
+  const clearHistBtn = document.getElementById('clear-history');
+  const qrBtn        = document.getElementById('qr-btn');
+  const qrModal      = document.getElementById('qr-modal');
+  const qrClose      = document.getElementById('qr-close');
+  const qrCanvas     = document.getElementById('qr-canvas');
+
+  // ── Theme ────────────────────────────────────────────────────────────────
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+  themeToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+  });
+
+  // ── Paste button ─────────────────────────────────────────────────────────
+  pasteBtn.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      urlInput.value = text;
+      urlInput.focus();
+      if (isYouTubeUrl(text)) handleFetch();
+    } catch { /* clipboard permission denied */ }
+  });
+
+  // Auto-detect paste into input
+  urlInput.addEventListener('paste', (e) => {
+    setTimeout(() => {
+      const val = urlInput.value;
+      if (isYouTubeUrl(val)) handleFetch();
+    }, 50);
+  });
+
+  urlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleFetch();
+  });
+
+  fetchBtn.addEventListener('click', handleFetch);
+
+  // ── Fetch metadata ───────────────────────────────────────────────────────
+  async function handleFetch() {
+    const url = urlInput.value.trim();
+    if (!url) return showError('Please paste a YouTube URL first.');
+    if (!isYouTubeUrl(url)) return showError('That doesn\'t look like a YouTube URL.');
+
+    setLoading(true);
+    hideError();
+    resultArea.classList.add('hidden');
+
+    try {
+      const res = await fetch(`${API_BASE}/info?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch video info.');
+
+      currentVideoData = data;
+      currentUrl = url;
+      renderResult(data, url);
+      saveToHistory(data, url);
+
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Render video result ──────────────────────────────────────────────────
+  function renderResult(data, url) {
+    videoThumb.src = data.thumbnail;
+    videoThumb.alt = data.title;
+    videoDur.textContent = data.duration_string || formatDuration(data.duration);
+    videoTitle.textContent = data.title;
+    videoUpl.textContent = data.uploader || 'Unknown';
+    videoViews.textContent = formatNumber(data.view_count) + ' views';
+
+    // Render video formats
+    videoFmts.innerHTML = '';
+    if (data.formats.video.length === 0) {
+      videoFmts.innerHTML = '<p style="color:var(--text3);font-size:13px;padding:8px 0;">No video formats found.</p>';
+    } else {
+      data.formats.video.forEach(f => {
+        videoFmts.appendChild(createFormatRow(f, 'video', data.title, url));
+      });
+    }
+
+    // Render audio formats
+    audioFmts.innerHTML = '';
+    if (data.formats.audio.length === 0) {
+      audioFmts.innerHTML = '<p style="color:var(--text3);font-size:13px;padding:8px 0;">No audio formats found.</p>';
+    } else {
+      data.formats.audio.forEach(f => {
+        audioFmts.appendChild(createFormatRow(f, 'audio', data.title, url));
+      });
+    }
+
+    resultArea.classList.remove('hidden');
+    showTab('video');
+  }
+
+  // ── Format row builder ───────────────────────────────────────────────────
+  function createFormatRow(fmt, type, title, url) {
+    const row = document.createElement('div');
+    row.className = 'format-row';
+
+    const isVideo = type === 'video';
+    const label = isVideo
+      ? fmt.label + (fmt.fps ? ` · ${Math.round(fmt.fps)}fps` : '')
+      : fmt.label;
+    const meta = fmt.filesize
+      ? formatBytes(fmt.filesize)
+      : (isVideo ? 'mp4' : 'mp3') + ' · size varies';
+
+    row.innerHTML = `
+      <div class="format-left">
+        <div class="format-icon ${type}">${isVideo ? '🎬' : '🎵'}</div>
+        <div>
+          <div class="format-label">${label}</div>
+          <div class="format-meta">${meta}</div>
+        </div>
+      </div>
+      <button class="dl-btn ${isVideo ? 'video-btn' : 'audio-btn'}">
+        ⬇ Download
+      </button>
+    `;
+
+    row.querySelector('.dl-btn').addEventListener('click', () => {
+      triggerDownload(url, fmt.format_id, type, title, fmt.videoOnly);
+    });
+
+    return row;
+  }
+
+  // ── Trigger download ─────────────────────────────────────────────────────
+  function triggerDownload(url, formatId, type, title, videoOnly) {
+    const params = new URLSearchParams({ url, format_id: formatId, type, title });
+    if (videoOnly) params.set('videoOnly', 'true');
+
+    // Show progress toast
+    progressToast.classList.remove('hidden');
+    setTimeout(() => progressToast.classList.add('hidden'), 12000);
+
+    // Trigger browser download via hidden <a>
+    const a = document.createElement('a');
+    a.href = `${API_BASE}/download?${params}`;
+    a.download = title + (type === 'audio' ? '.mp3' : '.mp4');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────────────────────
+  [tabVideo, tabAudio].forEach(tab => {
+    tab.addEventListener('click', () => showTab(tab.dataset.tab));
+  });
+
+  function showTab(tab) {
+    const isVideo = tab === 'video';
+    tabVideo.classList.toggle('active', isVideo);
+    tabAudio.classList.toggle('active', !isVideo);
+    videoFmts.classList.toggle('hidden', !isVideo);
+    audioFmts.classList.toggle('hidden', isVideo);
+  }
+
+  // ── History ──────────────────────────────────────────────────────────────
+  function loadHistory() {
+    const h = JSON.parse(localStorage.getItem('ytdl_history') || '[]');
+    if (h.length === 0) { historySec.classList.add('hidden'); return; }
+    historySec.classList.remove('hidden');
+    historyList.innerHTML = '';
+    h.slice(0, 8).forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'history-item';
+      el.innerHTML = `
+        <img class="history-thumb" src="${item.thumbnail}" alt="" loading="lazy" />
+        <div class="history-meta">
+          <div class="history-title">${item.title}</div>
+          <div class="history-date">${item.date}</div>
+        </div>
+        <span style="font-size:11px;color:var(--text3);">↗</span>
+      `;
+      el.addEventListener('click', () => {
+        urlInput.value = item.url;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        handleFetch();
+      });
+      historyList.appendChild(el);
+    });
+  }
+
+  function saveToHistory(data, url) {
+    const h = JSON.parse(localStorage.getItem('ytdl_history') || '[]');
+    const entry = {
+      id: data.id,
+      title: data.title,
+      thumbnail: data.thumbnail,
+      url,
+      date: new Date().toLocaleDateString(),
+    };
+    const filtered = h.filter(x => x.id !== data.id);
+    filtered.unshift(entry);
+    localStorage.setItem('ytdl_history', JSON.stringify(filtered.slice(0, 20)));
+    loadHistory();
+  }
+
+  clearHistBtn.addEventListener('click', () => {
+    localStorage.removeItem('ytdl_history');
+    loadHistory();
+  });
+
+  loadHistory();
+
+  // ── QR Code ───────────────────────────────────────────────────────────────
+  qrBtn.addEventListener('click', () => {
+    if (!currentUrl) return;
+    qrCanvas.innerHTML = '';
+    new QRCode(qrCanvas, { text: currentUrl, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+    qrModal.classList.remove('hidden');
+  });
+  qrClose.addEventListener('click', () => qrModal.classList.add('hidden'));
+  qrModal.addEventListener('click', e => { if (e.target === qrModal) qrModal.classList.add('hidden'); });
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function setLoading(on) {
+    fetchBtn.disabled = on;
+    fetchLabel.innerHTML = on
+      ? '<span class="spinner"></span>'
+      : 'Fetch';
+  }
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorBanner.classList.remove('hidden');
+  }
+
+  function hideError() {
+    errorBanner.classList.add('hidden');
+  }
+
+  function isYouTubeUrl(url) {
+    return /^https?:\/\/(www\.)?(youtube\.com\/(watch|shorts)|youtu\.be\/)/.test(url);
+  }
+
+  function formatDuration(secs) {
+    if (!secs) return '';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function formatNumber(n) {
+    if (!n) return '0';
+    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n.toString();
+  }
+
+  function formatBytes(bytes) {
+    if (!bytes) return '';
+    if (bytes >= 1e9) return (bytes / 1e9).toFixed(2) + ' GB';
+    if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB';
+    return Math.round(bytes / 1024) + ' KB';
+  }
+  </script>
+</body>
+</html>
